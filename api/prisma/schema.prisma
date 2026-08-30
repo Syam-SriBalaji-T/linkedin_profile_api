@@ -1,0 +1,75 @@
+// Readable model of the database. NOT the migration source of truth —
+// api/migrations/*.sql is, applied by `pnpm migrate`.
+// Models and fields mirror the real table and column names exactly.
+
+datasource db {
+  provider = "postgresql"
+}
+
+model users {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email              String
+  password_hash      String
+  session_token_hash String?   @unique
+  session_expires_at DateTime? @db.Timestamptz(6)
+  created_at         DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime  @default(now()) @db.Timestamptz(6)
+
+  jobs jobs[]
+
+  @@index([session_expires_at], map: "users_session_expires_at_idx")
+}
+
+model profiles_cache {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  public_id      String   @unique
+  profile_url    String
+  normalised     Json     @db.JsonB
+  raw            Json?    @db.JsonB
+  schema_version Int      @default(1)
+  fetched_at     DateTime @default(now()) @db.Timestamptz(6)
+  expires_at     DateTime @db.Timestamptz(6)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  jobs jobs[]
+
+  @@index([expires_at], map: "profiles_cache_expires_at_idx")
+}
+
+model jobs {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String    @db.Uuid
+  public_id     String
+  requested_url String
+  status        String    @default("queued")
+  attempts      Int       @default(0)
+  last_error    String?
+  profile_id    String?   @db.Uuid
+  started_at    DateTime? @db.Timestamptz(6)
+  finished_at   DateTime? @db.Timestamptz(6)
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime  @default(now()) @db.Timestamptz(6)
+
+  users          users           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles_cache profiles_cache? @relation(fields: [profile_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([status, created_at], map: "jobs_claim_idx")
+  @@index([user_id, created_at(sort: Desc)], map: "jobs_user_created_idx")
+  @@index([status, started_at], map: "jobs_running_started_idx")
+  @@index([public_id], map: "jobs_public_id_idx")
+}
+
+model cors_origins {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  origin      String
+  enabled     Boolean  @default(true)
+  description String?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model schema_migrations {
+  filename   String   @id
+  applied_at DateTime @default(now()) @db.Timestamptz(6)
+}

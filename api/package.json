@@ -1,0 +1,63 @@
+{
+  "name": "unfurl-api",
+  "version": "0.1.0",
+  "description": "Unfurl API - LinkedIn profile fetch, cache and serve",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.13",
+    "pnpm": ">=11"
+  },
+  "packageManager": "pnpm@11.24.0",
+  "scripts": {
+    "build": "nest build",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:prod": "node dist/main.js",
+    "worker": "nest start --entryFile worker",
+    "worker:dev": "nest start --watch --entryFile worker",
+    "worker:prod": "node dist/worker.js",
+    "migrate": "tsx scripts/migrate.ts",
+    "migrate:prod": "node dist-scripts/migrate.js",
+    "db:erd": "tsx scripts/generate-erd.ts",
+    "db:studio": "prisma studio",
+    "db:pull": "prisma db pull",
+    "db:validate": "prisma validate",
+    "db:format": "prisma format",
+    "db:diff": "prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script",
+    "lint": "eslint \"{src,scripts}/**/*.ts\" --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"scripts/**/*.ts\""
+  },
+  "dependencies": {
+    "@nestjs/common": "12.0.1",
+    "@nestjs/config": "12.0.0",
+    "@nestjs/core": "12.0.1",
+    "@nestjs/platform-express": "12.0.1",
+    "cheerio": "1.2.0",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.15.1",
+    "domhandler": "5.0.3",
+    "dotenv": "17.4.2",
+    "pg": "8.23.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@nestjs/cli": "12.0.0",
+    "@nestjs/schematics": "12.0.0",
+    "@types/express": "5.0.6",
+    "@types/node": "26.4.0",
+    "@types/pg": "8.23.1",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.11.0",
+    "prettier": "3.9.6",
+    "prisma": "7.10.0",
+    "source-map-support": "0.5.21",
+    "ts-loader": "9.6.2",
+    "tsx": "4.23.12",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.68.0"
+  }
+}

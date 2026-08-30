@@ -1,0 +1,51 @@
+services:
+  migrate:
+    build: ./api
+    command: ['pnpm', 'migrate:prod']
+    env_file: ./api/.env
+    restart: 'no'
+
+  api:
+    build: ./api
+    command: ['node', 'dist/main.js']
+    env_file: ./api/.env
+    environment:
+      PORT: '3001'
+    ports:
+      - '3001:3001'
+
+  worker:
+    build: ./api
+    command: ['node', 'dist/worker.js']
+    env_file: ./api/.env
+
+  web:
+    build: ./web
+    env_file: ./web/.env
+    environment:
+      API_BASE_URL: http://api:3001
+      PORT: '3000'
+    ports:
+      - '3000:3000'
+    depends_on:
+      - api
+
+  db:
+    profiles: ['local-db']
+    image: postgres:17.2-alpine
+    environment:
+      POSTGRES_USER: unfurl
+      POSTGRES_PASSWORD: unfurl
+      POSTGRES_DB: unfurl
+    ports:
+      - '5432:5432'
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U unfurl -d unfurl']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db_data:
