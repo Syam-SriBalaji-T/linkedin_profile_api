@@ -18,6 +18,10 @@ services:
     command: ['node', 'dist/worker.js']
     env_file: ./api/.env
     restart: unless-stopped
+    # The image's HEALTHCHECK probes the HTTP server on :3001, which this
+    # process does not run. Disable it so the container reports honestly.
+    healthcheck:
+      disable: true
 
   web:
     build: ./web
