@@ -45,37 +45,49 @@ function parseExperience($: CheerioAPI): Experience[] {
   if (!section) return [];
 
   const out: Experience[] = [];
+  // LinkedIn renders a single-role entry as an outer li.profile-entity-lockup
+  // wrapping an identical inner one (class `sub-group`). .find() matches at any
+  // depth, so an unfiltered selector returns every experience twice. Keep only
+  // the outermost lockups.
   $(section)
     .find('li.profile-entity-lockup')
+    .filter((_, li) => $(li).parents('li.profile-entity-lockup').length === 0)
     .each((_, li) => {
       const $li = $(li);
-      const company = clean($li.find('.list-item-heading, .body-medium-bold').first().text());
-      if (!company) return;
-
       const link = $li.find('a[href*="/company/"]').first().attr('href');
-      const logo = imageUrl($, $li.find('img').first()[0]);
+      const company_url = link ? link.split('?')[0] : null;
+      const logo_url = imageUrl($, $li.find('img').first()[0]);
+      const $heading = $li.find('.list-item-heading, .body-medium-bold').first();
+      const roleContainers = $li.find('li.role-container');
 
-      const roles: ExperienceRole[] = [];
-      const nested = $li.find('li.role-container');
-      if (nested.length) {
-        nested.each((__, r) => {
-          const title = clean($(r).find('.body-small-bold').first().text());
-          const dates = clean(
-            $(r).find('.body-small.text-color-text').not('.body-small-bold').first().text(),
-          );
+      if (roleContainers.length) {
+        // Grouped entry (several roles at one company): the heading is the
+        // company name and each li.role-container holds one role.
+        const company = clean($heading.text());
+        if (!company) return;
+        const roles: ExperienceRole[] = [];
+        roleContainers.each((__, r) => {
+          const $r = $(r);
+          const title = clean($r.find('.body-small-bold').first().text());
+          const dates = clean($r.find('.body-small').not('.body-small-bold').first().text());
           if (title) roles.push({ title, ...splitDates(dates) });
         });
-      } else {
-        const title = clean($li.find('.body-small-bold, .list-item-subtitle').first().text());
-        const dates = clean($li.find('.body-small.text-color-text-low-emphasis').first().text());
-        if (title) roles.push({ title, ...splitDates(dates) });
+        out.push({ company, company_url, logo_url, roles });
+        return;
       }
 
+      // Single-role entry: the heading is the ROLE title, the first .body-small
+      // sibling after it is the company, and the second holds the dates.
+      const title = clean($heading.text());
+      const details = $heading.nextAll('.body-small');
+      const company = clean(details.eq(0).text());
+      const dates = clean(details.eq(1).text());
+      if (!company && !title) return;
       out.push({
-        company,
-        company_url: link ? link.split('?')[0] : null,
-        logo_url: logo,
-        roles,
+        company: company || title,
+        company_url,
+        logo_url,
+        roles: title ? [{ title, ...splitDates(dates) }] : [],
       });
     });
   return out;
