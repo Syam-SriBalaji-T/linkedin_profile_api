@@ -1,0 +1,12 @@
+# Reverse proxy + automatic HTTPS for unfurl.
+# Caddy obtains and renews Let's Encrypt certificates on its own.
+
+unfurl.syamdev.site {
+	encode gzip
+	reverse_proxy web:3000
+}
+
+api.unfurl.syamdev.site {
+	encode gzip
+	reverse_proxy api:3001
+}
