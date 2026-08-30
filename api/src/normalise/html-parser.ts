@@ -28,6 +28,20 @@ function sectionByTitle($: CheerioAPI, title: string): AnyNode | undefined {
   return found;
 }
 
+const DATE_RE = /\b(19|20)\d{2}\b|present/i;
+
+/**
+ * Only the outermost entries in a section. LinkedIn nests a second
+ * <li class="profile-entity-lockup"> inside each entry, so a naive find()
+ * returns every experience/education row twice.
+ */
+function outermostEntries($: CheerioAPI, section: AnyNode): AnyNode[] {
+  return $(section)
+    .find('li.profile-entity-lockup')
+    .filter((_, el) => $(el).parents('li.profile-entity-lockup').length === 0)
+    .toArray();
+}
+
 /** Splits "2015 - Present · 11 yrs 8 mos" into the range and the duration. */
 function splitDates(raw: string): { date_range: string | null; duration: string | null } {
   const text = clean(raw);
@@ -45,51 +59,50 @@ function parseExperience($: CheerioAPI): Experience[] {
   if (!section) return [];
 
   const out: Experience[] = [];
-  // LinkedIn renders a single-role entry as an outer li.profile-entity-lockup
-  // wrapping an identical inner one (class `sub-group`). .find() matches at any
-  // depth, so an unfiltered selector returns every experience twice. Keep only
-  // the outermost lockups.
-  $(section)
-    .find('li.profile-entity-lockup')
-    .filter((_, li) => $(li).parents('li.profile-entity-lockup').length === 0)
-    .each((_, li) => {
-      const $li = $(li);
-      const link = $li.find('a[href*="/company/"]').first().attr('href');
-      const company_url = link ? link.split('?')[0] : null;
-      const logo_url = imageUrl($, $li.find('img').first()[0]);
-      const $heading = $li.find('.list-item-heading, .body-medium-bold').first();
-      const roleContainers = $li.find('li.role-container');
+  for (const entry of outermostEntries($, section)) {
+    const $e = $(entry);
+    const logo = imageUrl($, $e.find('img').first()[0]);
+    const link = $e.find('a[href*="/company/"]').first().attr('href');
+    const companyUrl = link ? link.split('?')[0] : null;
+    const heading = clean($e.find('.list-item-heading, .body-medium-bold').first().text());
 
-      if (roleContainers.length) {
-        // Grouped entry (several roles at one company): the heading is the
-        // company name and each li.role-container holds one role.
-        const company = clean($heading.text());
-        if (!company) return;
-        const roles: ExperienceRole[] = [];
-        roleContainers.each((__, r) => {
-          const $r = $(r);
-          const title = clean($r.find('.body-small-bold').first().text());
-          const dates = clean($r.find('.body-small').not('.body-small-bold').first().text());
-          if (title) roles.push({ title, ...splitDates(dates) });
-        });
-        out.push({ company, company_url, logo_url, roles });
-        return;
-      }
-
-      // Single-role entry: the heading is the ROLE title, the first .body-small
-      // sibling after it is the company, and the second holds the dates.
-      const title = clean($heading.text());
-      const details = $heading.nextAll('.body-small');
-      const company = clean(details.eq(0).text());
-      const dates = clean(details.eq(1).text());
-      if (!company && !title) return;
-      out.push({
-        company: company || title,
-        company_url,
-        logo_url,
-        roles: title ? [{ title, ...splitDates(dates) }] : [],
+    const roleContainers = $e.find('li.role-container');
+    if (roleContainers.length > 0) {
+      // Grouped: one company, several roles. The heading is the company.
+      const roles: ExperienceRole[] = [];
+      roleContainers.each((_, rc) => {
+        const title = clean($(rc).find('.body-small-bold').first().text());
+        const dates = clean(
+          $(rc)
+            .find('div.body-small')
+            .filter((__, d) => DATE_RE.test($(d).text()))
+            .first()
+            .text(),
+        );
+        if (title) roles.push({ title, ...splitDates(dates) });
       });
-    });
+      out.push({ company: nullify(heading), company_url: companyUrl, logo_url: logo, roles });
+    } else {
+      // Single role: the heading is the title; company + dates are sub-lines.
+      let company: string | null = null;
+      let dates = '';
+      $e.find('div.body-small').each((_, d) => {
+        const t = clean($(d).text());
+        if (!t) return;
+        if (!dates && DATE_RE.test(t)) {
+          dates = t;
+        } else if (!company && !DATE_RE.test(t) && !/see (more|less)/i.test(t)) {
+          company = t;
+        }
+      });
+      out.push({
+        company,
+        company_url: companyUrl,
+        logo_url: logo,
+        roles: [{ title: nullify(heading), ...splitDates(dates) }],
+      });
+    }
+  }
   return out;
 }
 
@@ -98,21 +111,27 @@ function parseEducation($: CheerioAPI): Education[] {
   if (!section) return [];
 
   const out: Education[] = [];
-  $(section)
-    .find('li.profile-entity-lockup')
-    .each((_, li) => {
-      const $li = $(li);
-      const school = clean($li.find('.list-item-heading, .body-medium-bold').first().text());
-      if (!school) return;
-      const degree = clean($li.find('.body-small').not('.body-small-bold').first().text());
-      const link = $li.find('a[href*="/school/"]').first().attr('href');
-      out.push({
-        school,
-        degree: nullify(degree),
-        school_url: link ? link.split('?')[0] : null,
-        logo_url: imageUrl($, $li.find('img').first()[0]),
-      });
+  for (const entry of outermostEntries($, section)) {
+    const $e = $(entry);
+    const school = clean($e.find('.list-item-heading, .body-medium-bold').first().text());
+    if (!school) continue;
+
+    let degree: string | null = null;
+    $e.find('div.body-small').each((_, d) => {
+      const t = clean($(d).text());
+      if (!degree && t && t !== school && !DATE_RE.test(t) && !/see (more|less)/i.test(t)) {
+        degree = t;
+      }
     });
+
+    const link = $e.find('a[href*="/school/"]').first().attr('href');
+    out.push({
+      school,
+      degree,
+      school_url: link ? link.split('?')[0] : null,
+      logo_url: imageUrl($, $e.find('img').first()[0]),
+    });
+  }
   return out;
 }
 
