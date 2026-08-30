@@ -4,7 +4,38 @@ A hosted API that accepts a LinkedIn profile URL and returns the profile as
 structured JSON, by **reverse-engineering LinkedIn's mobile web endpoint** —
 direct HTTP, no browser automation, no third-party scraping API.
 
-> Built for the Tross engineering challenge.
+## Live
+
+| | |
+| --- | --- |
+| **Web UI** | <https://unfurl.syamdev.site/> |
+| **API base** | <https://api.unfurl.syamdev.site/> |
+| **Health check** | <https://api.unfurl.syamdev.site/health> |
+
+```bash
+curl "https://api.unfurl.syamdev.site/profile?url=https://www.linkedin.com/in/sundarpichai/"
+```
+
+## The challenge
+
+Built for the **Tross engineering hiring challenge**:
+
+> Reverse engineer LinkedIn APIs and build a hosted API that accepts a LinkedIn
+> profile URL and returns most of the information available on the profile page
+> as structured JSON.
+
+| Requirement | Where it is met |
+| --- | --- |
+| Deploy the API publicly over HTTPS | `api.unfurl.syamdev.site` — Let's Encrypt certificate, HTTP redirects to HTTPS |
+| Accept a LinkedIn profile URL as input | `GET /profile?url=…` — accepts a full profile URL or a bare vanity slug |
+| Return name, headline, location, about, experience, education, skills, certifications, languages and profile images | See the response schema under **API** below |
+| May use own LinkedIn credentials in the backend | A single authenticated session cookie, supplied via `LINKEDIN_COOKIE` |
+| Public GitHub repository with complete source | This repository |
+| README with setup, API documentation, approach and known limitations | This file |
+| Keep all credentials and secrets out of the repository | `.env` files and captured cookie dumps are gitignored; no secret has ever been committed |
+
+The response schema was left to the implementer; the one used here is documented
+below.
 
 ## Approach
 
@@ -38,7 +69,7 @@ Public, synchronous. Returns structured JSON. Serves a cached copy (24h) when
 available so repeat calls don't hit LinkedIn.
 
 ```bash
-curl "https://<your-host>/profile?url=https://www.linkedin.com/in/sundarpichai/"
+curl "https://api.unfurl.syamdev.site/profile?url=https://www.linkedin.com/in/sundarpichai/"
 ```
 
 Query params:
@@ -127,6 +158,36 @@ is gitignored).
 NestJS + TypeScript · PostgreSQL (raw SQL migrations) · cheerio (HTML parsing) ·
 pnpm. `prisma/schema.prisma` is a read-only schema view (not used at runtime).
 
+## Deployment
+
+Running on a single **AWS EC2 `t4g.small`** (2 vCPU ARM/Graviton, Ubuntu 24.04)
+in `ap-southeast-1`, deliberately co-located with the **Neon** Postgres instance
+so database round-trips stay on the same continent as the app.
+
+Everything runs as containers under Docker Compose:
+
+| Service | Role |
+| --- | --- |
+| `caddy` | Reverse proxy; terminates TLS and obtains/renews Let's Encrypt certificates automatically. The only container with published ports (80/443). |
+| `web` | Next.js UI on `unfurl.syamdev.site` |
+| `api` | NestJS HTTP API on `api.unfurl.syamdev.site` |
+| `worker` | Polls the job queue for the async search-history feature |
+| `migrate` | Run-once SQL migrations |
+
+`api` and `web` publish no host ports — they are reachable only over the internal
+Docker network, so every external request goes through Caddy. Hostname routing
+lives in `Caddyfile`.
+
+```bash
+# deploy a change
+git pull && docker compose up -d --build
+
+# operate
+docker compose ps
+docker compose logs -f api
+docker compose restart worker
+```
+
 ## Known limitations
 
 - **Rate limiting.** A single account gets soft-blocked by LinkedIn after a
@@ -155,4 +216,6 @@ api/
     database/ config/ common/ health/
   migrations/     raw SQL
 web/              Next.js UI (optional demo)
+Caddyfile         reverse proxy + automatic HTTPS for both hostnames
+docker-compose.yml  api / worker / web / caddy / migrate
 ```
