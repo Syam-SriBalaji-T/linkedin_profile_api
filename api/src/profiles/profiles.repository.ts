@@ -14,6 +14,13 @@ export class ProfilesRepository {
     );
   }
 
+  /** Marks a cached profile stale so the next fetch re-fetches and re-parses. */
+  async expire(publicId: string): Promise<void> {
+    await this.db.query('UPDATE profiles_cache SET expires_at = now() WHERE public_id = $1', [
+      publicId,
+    ]);
+  }
+
   async findFresh(publicId: string): Promise<ProfileCacheRow | undefined> {
     return this.db.queryOne<ProfileCacheRow>(
       'SELECT * FROM profiles_cache WHERE public_id = $1 AND expires_at > now()',

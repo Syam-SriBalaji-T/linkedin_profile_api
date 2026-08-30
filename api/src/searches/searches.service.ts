@@ -33,7 +33,11 @@ export class SearchesService {
     const publicId = parsePublicId(input);
     const requestedUrl = input.trim();
 
-    if (!forceRefresh) {
+    if (forceRefresh) {
+      // The worker re-checks cache freshness before fetching, so a bypass must
+      // expire the cached row here or the stale copy would be served again.
+      await this.profiles.expire(publicId);
+    } else {
       const cached = await this.profiles.findFresh(publicId);
       if (cached) {
         const job = await this.jobs.createAlreadyDone({
