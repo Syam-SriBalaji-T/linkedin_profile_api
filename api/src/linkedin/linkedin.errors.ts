@@ -29,7 +29,7 @@ export class LinkedInError extends Error {
   static sessionInvalid(): LinkedInError {
     return new LinkedInError(
       'session_invalid',
-      'The stored LinkedIn session is no longer valid (LINKEDIN_LI_AT / LINKEDIN_CSRF_TOKEN)',
+      'The stored LinkedIn session is no longer valid (refresh LINKEDIN_COOKIE)',
       false,
     );
   }
@@ -37,7 +37,7 @@ export class LinkedInError extends Error {
   static notConfigured(): LinkedInError {
     return new LinkedInError(
       'not_configured',
-      'LinkedIn credentials are not configured (LINKEDIN_LI_AT / LINKEDIN_CSRF_TOKEN)',
+      'LinkedIn credentials are not configured (set LINKEDIN_COOKIE)',
       false,
     );
   }

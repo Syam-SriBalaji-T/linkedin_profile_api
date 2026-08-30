@@ -4,6 +4,7 @@ import { AppConfigModule } from './config/config.module';
 import { CorsModule } from './cors/cors.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
+import { InlineWorkerModule } from './jobs/inline-worker.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { SearchesModule } from './searches/searches.module';
 
@@ -16,6 +17,7 @@ import { SearchesModule } from './searches/searches.module';
     SearchesModule,
     ProfilesModule,
     HealthModule,
+    InlineWorkerModule,
   ],
 })
 export class AppModule {}

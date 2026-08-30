@@ -103,6 +103,13 @@ export class AppConfig {
     return this.num('WORKER_CONCURRENCY', 1);
   }
 
+  /** When true, the API process also runs the job worker loop (convenient for
+   *  local dev / single-process deploys). In production run the worker
+   *  separately and leave this false. */
+  get runWorkerInApi(): boolean {
+    return this.str('RUN_WORKER_IN_API') === 'true';
+  }
+
   get jobStuckAfterMs(): number {
     return this.num('JOB_STUCK_AFTER_MS', 5 * 60_000);
   }

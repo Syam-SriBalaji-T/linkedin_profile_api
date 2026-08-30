@@ -38,15 +38,15 @@ export default async function DashboardPage() {
 
       {sessionInvalid && (
         <ErrorNote>
-          The stored LinkedIn session is no longer valid, so new fetches will fail. Update
-          LINKEDIN_LI_AT and LINKEDIN_CSRF_TOKEN in api/.env. Cached profiles still load.
+          The stored LinkedIn session is no longer valid, so new fetches will fail. Refresh
+          LINKEDIN_COOKIE in api/.env. Cached profiles still load.
         </ErrorNote>
       )}
 
       {notConfigured && (
         <ErrorNote>
-          No LinkedIn credentials are configured, so fetches cannot run. Set LINKEDIN_LI_AT and
-          LINKEDIN_CSRF_TOKEN in api/.env. Cached profiles still load.
+          No LinkedIn credentials are configured, so fetches cannot run. Set LINKEDIN_COOKIE in
+          api/.env. Cached profiles still load.
         </ErrorNote>
       )}
 

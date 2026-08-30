@@ -6,3 +6,4 @@ allowBuilds:
   prisma: true
 
   esbuild: false
+  '@swc/core': true

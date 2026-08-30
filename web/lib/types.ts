@@ -12,41 +12,41 @@ export interface LoginResult {
 
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
 
-export interface DateRange {
-  start: string | null;
-  end: string | null;
+export interface ExperienceRole {
+  title: string | null;
+  date_range: string | null;
+  duration: string | null;
 }
 
-export interface Position {
-  title: string | null;
+export interface Experience {
   company: string | null;
-  location: string | null;
-  description: string | null;
-  dates: DateRange;
-  current: boolean;
+  company_url: string | null;
+  logo_url: string | null;
+  roles: ExperienceRole[];
 }
 
 export interface Education {
   school: string | null;
   degree: string | null;
-  field: string | null;
-  dates: DateRange;
+  school_url: string | null;
+  logo_url: string | null;
 }
 
 export interface NormalisedProfile {
   public_id: string;
   profile_url: string;
-  first_name: string | null;
-  last_name: string | null;
-  full_name: string | null;
+  name: string | null;
   headline: string | null;
-  summary: string | null;
   location: string | null;
-  industry: string | null;
+  about: string | null;
+  followers: string | null;
   picture_url: string | null;
-  positions: Position[];
+  background_url: string | null;
+  experience: Experience[];
   education: Education[];
   skills: string[];
+  certifications: string[];
+  languages: string[];
   schema_version: number;
 }
 

@@ -1,7 +1,10 @@
-import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { AppConfig } from '../config/configuration';
 import { JobProcessorService } from './job-processor.service';
 import { JobsRepository } from './jobs.repository';
+
+/** Injection token: whether this process should run the polling loop. */
+export const WORKER_AUTOSTART = Symbol('WORKER_AUTOSTART');
 
 @Injectable()
 export class JobRunnerService implements OnModuleInit, OnApplicationShutdown {
@@ -14,11 +17,16 @@ export class JobRunnerService implements OnModuleInit, OnApplicationShutdown {
     private readonly jobs: JobsRepository,
     private readonly processor: JobProcessorService,
     private readonly config: AppConfig,
+    @Inject(WORKER_AUTOSTART) private readonly autostart: boolean,
   ) {}
 
   onModuleInit(): void {
+    if (!this.autostart) {
+      this.logger.log('Worker loop disabled in this process (set RUN_WORKER_IN_API=true to enable).');
+      return;
+    }
     const concurrency = Math.max(1, this.config.workerConcurrency);
-    this.logger.log(`Starting ${concurrency} worker loop(s)`);
+    this.logger.log(`Worker loop ENABLED — starting ${concurrency} loop(s), polling for queued jobs`);
 
     for (let i = 0; i < concurrency; i += 1) {
       this.loops.push(this.loop(i));
