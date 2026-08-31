@@ -12,6 +12,12 @@ services:
     environment:
       PORT: '3001'
     restart: unless-stopped
+    networks:
+      default: {}
+      # Alias rather than the service name: another project may also call a
+      # service `api`, and they would collide on the shared network.
+      edge:
+        aliases: ['unfurl-api']
 
   worker:
     build: ./api
@@ -32,20 +38,10 @@ services:
     restart: unless-stopped
     depends_on:
       - api
-
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - '80:80'
-      - '443:443'
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - web
-      - api
+    networks:
+      default: {}
+      edge:
+        aliases: ['unfurl-web']
 
   db:
     profiles: ['local-db']
@@ -66,5 +62,8 @@ services:
 
 volumes:
   db_data:
-  caddy_data:
-  caddy_config:
+
+# Owned by the edge project, so Compose here neither creates nor removes it.
+networks:
+  edge:
+    external: true

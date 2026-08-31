@@ -168,19 +168,21 @@ Everything runs as containers under Docker Compose:
 
 | Service | Role |
 | --- | --- |
-| `caddy` | Reverse proxy; terminates TLS and obtains/renews Let's Encrypt certificates automatically. The only container with published ports (80/443). |
 | `web` | Next.js UI on `unfurl.syamdev.site` |
 | `api` | NestJS HTTP API on `api.unfurl.syamdev.site` |
 | `worker` | Polls the job queue for the async search-history feature |
 | `migrate` | Run-once SQL migrations |
 
-`api` and `web` publish no host ports — they are reachable only over the internal
-Docker network, so every external request goes through Caddy. Hostname routing
-lives in `Caddyfile`.
+`api` and `web` publish no host ports. They join the shared external `edge`
+network under the aliases `unfurl-api` and `unfurl-web`, and TLS, hostname routing
+and certificates are handled by the separate
+[`syamdev-edge`](https://github.com/Syam-SriBalaji-T/syamdev-edge) project — the
+box's single ingress, shared with unrelated sites. Nothing here needs to know it
+exists.
 
 ```bash
 # deploy a change
-git pull && docker compose up -d --build
+./deploy.sh
 
 # operate
 docker compose ps
@@ -216,6 +218,6 @@ api/
     database/ config/ common/ health/
   migrations/     raw SQL
 web/              Next.js UI (optional demo)
-Caddyfile         reverse proxy + automatic HTTPS for both hostnames
-docker-compose.yml  api / worker / web / caddy / migrate
+deploy.sh         pull + rebuild on the server
+docker-compose.yml  api / worker / web / migrate
 ```
