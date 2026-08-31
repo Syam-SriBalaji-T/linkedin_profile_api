@@ -176,7 +176,7 @@ Everything runs as containers under Docker Compose:
 `api` and `web` publish no host ports. They join the shared external `edge`
 network under the aliases `unfurl-api` and `unfurl-web`, and TLS, hostname routing
 and certificates are handled by the separate
-[`syamdev-edge`](https://github.com/Syam-SriBalaji-T/syamdev-edge) project — the
+[`syamdev-infra`](https://github.com/Syam-SriBalaji-T/syamdev-infra) project — the
 box's single ingress, shared with unrelated sites. Nothing here needs to know it
 exists.
 
